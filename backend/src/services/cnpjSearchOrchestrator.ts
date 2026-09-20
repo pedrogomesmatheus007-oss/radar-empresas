@@ -106,7 +106,9 @@ export async function searchCnpjsForNiche(niche: string, quantity: number): Prom
         cnpjFormatted: validation.cnpjFormatted,
         companyName: validation.companyName ?? candidate.companyName,
         status: validation.statusDescription ?? "Não foi possível verificar este dado.",
-        isMei: validation.isMei === true,
+        // Chegar aqui já garante que não é MEI (o `continue` acima descarta
+        // isMei === true antes disso), então o valor guardado é sempre false.
+        isMei: false,
         legalNature: validation.legalNature,
         niche: cleanNiche,
         sourceNote: candidate.sourceNote ?? null,
