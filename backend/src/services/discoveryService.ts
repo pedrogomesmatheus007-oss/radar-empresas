@@ -107,7 +107,7 @@ export class AnthropicCompanyDiscoveryProvider implements CompanyDiscoveryProvid
           type: "web_search_20250305",
           name: "web_search",
           max_uses: env.anthropicWebSearchMaxUses,
-        } as Anthropic.Messages.Tool,
+        } as unknown as Anthropic.Messages.Tool,
       ],
       messages: [{ role: "user", content: prompt }],
     });
