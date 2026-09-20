@@ -54,6 +54,14 @@ export interface CompanyCandidate {
   companyName: string;
   url: string;
   sourceNote?: string;
+  /**
+   * CNPJ opcional já encontrado NA MESMA busca (economiza uma chamada extra
+   * de IA por empresa). Só deve vir preenchido quando o modelo encontrou
+   * evidência real; null/ausente significa "não encontrado nesta busca" —
+   * nunca é tratado como convite para inventar.
+   */
+  cnpj?: string | null;
+  cnpjSourceNote?: string | null;
 }
 
 export interface CnpjCandidate {
