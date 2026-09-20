@@ -86,3 +86,12 @@ export async function listAllCnpjs(): Promise<CnpjRecord[]> {
   const { rows } = await pool.query("SELECT * FROM cnpjs ORDER BY first_seen_at DESC");
   return (rows as Row[]).map(toRecord);
 }
+
+export async function listCnpjsByNiche(niche: string): Promise<CnpjRecord[]> {
+  const pool = getPool();
+  const { rows } = await pool.query(
+    "SELECT * FROM cnpjs WHERE niche = $1 ORDER BY first_seen_at DESC",
+    [niche]
+  );
+  return (rows as Row[]).map(toRecord);
+}
