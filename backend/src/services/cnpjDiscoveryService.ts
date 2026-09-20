@@ -154,7 +154,7 @@ export class AnthropicCnpjDiscoveryProvider implements CnpjDiscoveryProvider {
           type: "web_search_20250305",
           name: "web_search",
           max_uses: env.anthropicWebSearchMaxUses,
-        } as Anthropic.Messages.Tool,
+        } as unknown as Anthropic.Messages.Tool,
       ],
       messages: [{ role: "user", content: prompt }],
     });
@@ -206,7 +206,7 @@ export class AnthropicCnpjDiscoveryProvider implements CnpjDiscoveryProvider {
           type: "web_search_20250305",
           name: "web_search",
           max_uses: Math.min(env.anthropicWebSearchMaxUses, 3),
-        } as Anthropic.Messages.Tool,
+        } as unknown as Anthropic.Messages.Tool,
       ],
       messages: [{ role: "user", content: prompt }],
     });
