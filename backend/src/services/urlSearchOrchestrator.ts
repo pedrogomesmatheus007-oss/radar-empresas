@@ -126,7 +126,18 @@ export async function searchUrlsForNiche(niche: string, quantity: number): Promi
 
     if (candidates.length === 0) break;
 
-    for (const candidate of candidates) {
+    // Prioriza candidatos que a própria busca já trouxe com um CNPJ (mesmo
+    // ainda não validado) — assim, dentro da quantidade pedida, as empresas
+    // com CNPJ real encontrado têm preferência sobre as que não têm. Isso não
+    // garante 100% de CNPJ na lista final (o CNPJ ainda pode falhar na
+    // validação oficial), mas maximiza as chances sem inventar nada.
+    const prioritizedCandidates = [...candidates].sort((a, b) => {
+      const aHasCnpj = a.cnpj ? 0 : 1;
+      const bHasCnpj = b.cnpj ? 0 : 1;
+      return aHasCnpj - bHasCnpj;
+    });
+
+    for (const candidate of prioritizedCandidates) {
       if (results.length >= quantity) break;
 
       const normalizedDomain = normalizeDomain(candidate.url);
