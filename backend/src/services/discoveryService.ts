@@ -61,15 +61,30 @@ Regras obrigatórias:
 - Se você não tiver certeza de que uma empresa/URL é real, NÃO a inclua — é melhor
   devolver menos resultados do que arriscar um dado inventado.
 
+Além disso, PARA CADA empresa que você incluir, aproveite a mesma pesquisa (sem fazer
+buscas extras separadas) para tentar identificar o CNPJ dela, olhando fontes como o
+rodapé do próprio site, termos de uso, política de privacidade ou cadastros públicos.
+- Só preencha o campo "cnpj" se você encontrou evidência real e específica do CNPJ
+  DAQUELA empresa. NUNCA invente um CNPJ nem reaproveite o de outra empresa parecida.
+- Se não encontrar o CNPJ com essa mesma pesquisa, deixe "cnpj" como null — isso é
+  normal e aceitável, a empresa ainda assim deve ser incluída pela URL.
+
 Ao final da sua resposta, depois de pesquisar, responda SOMENTE com um bloco de código
 JSON (sem nenhum texto antes ou depois dele) no seguinte formato exato:
 
 \`\`\`json
 [
-  { "companyName": "Nome da Empresa Ltda", "url": "https://dominio-real.com.br", "sourceNote": "encontrado via busca: <breve descrição de onde/como>" }
+  {
+    "companyName": "Nome da Empresa Ltda",
+    "url": "https://dominio-real.com.br",
+    "sourceNote": "encontrado via busca: <breve descrição de onde/como>",
+    "cnpj": "12345678000190",
+    "cnpjSourceNote": "encontrado via: <onde exatamente viu o CNPJ, ou null se não encontrou>"
+  }
 ]
 \`\`\`
 
+O campo "cnpj" deve ter apenas os 14 dígitos sem pontuação, ou ser null quando não encontrado.
 Se não encontrar nenhuma empresa que atenda a todos os critérios, responda com um array vazio: []`;
 }
 
@@ -129,6 +144,8 @@ export class AnthropicCompanyDiscoveryProvider implements CompanyDiscoveryProvid
         typeof (item as any).companyName === "string" &&
         typeof (item as any).url === "string"
       ) {
+        const rawCnpj = (item as any).cnpj;
+        const cnpjDigits = typeof rawCnpj === "string" ? rawCnpj.replace(/\D/g, "") : "";
         candidates.push({
           companyName: (item as any).companyName.trim(),
           url: (item as any).url.trim(),
@@ -136,6 +153,9 @@ export class AnthropicCompanyDiscoveryProvider implements CompanyDiscoveryProvid
             typeof (item as any).sourceNote === "string"
               ? (item as any).sourceNote
               : "Encontrado via busca na web (Anthropic API)",
+          cnpj: cnpjDigits.length === 14 ? cnpjDigits : null,
+          cnpjSourceNote:
+            typeof (item as any).cnpjSourceNote === "string" ? (item as any).cnpjSourceNote : null,
         });
       }
     }
