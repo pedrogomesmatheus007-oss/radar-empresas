@@ -1,7 +1,6 @@
 import { createLogger } from "../utils/logger.js";
 import { normalizeDomain } from "../utils/textNormalization.js";
 import { getCompanyDiscoveryProvider } from "./discoveryService.js";
-import { getCnpjDiscoveryProvider } from "./cnpjDiscoveryService.js";
 import { validateUrl } from "./urlValidationService.js";
 import { validateCnpj } from "./cnpjValidationService.js";
 import { runComplianceScreening } from "./complianceService.js";
@@ -52,27 +51,29 @@ const NO_CNPJ_PAIRED: PairedCnpjFields = {
 };
 
 /**
- * Tenta encontrar e validar um CNPJ real para a empresa de uma URL aceita
- * (pedido do usuário: "cada URL um CNPJ também"). Aplica os MESMOS critérios
- * obrigatórios da aba CNPJ — ATIVA, não-MEI, não parece pessoa física, não é
- * órgão público, e nunca repete um CNPJ já usado em lugar nenhum. Se qualquer
- * verificação falhar ou não houver evidência real, retorna "não emparelhado"
- * em vez de inventar ou relaxar os critérios — a URL ainda é mostrada
- * normalmente, só sem o CNPJ.
+ * Valida (sem nenhuma chamada extra de IA) o CNPJ que a própria busca de
+ * empresas já trouxe para essa URL (pedido do usuário: "cada URL um CNPJ
+ * também"). Antes, isso fazia uma segunda chamada de IA com busca na web
+ * por empresa — trocado por reaproveitar o CNPJ da busca original e só
+ * confirmá-lo numa fonte oficial gratuita (BrasilAPI/ReceitaWS), o que
+ * reduz muito o consumo de créditos por pesquisa sem abrir mão da regra de
+ * nunca inventar dado: aplica os MESMOS critérios obrigatórios da aba CNPJ —
+ * ATIVA, não-MEI, não parece pessoa física, não é órgão público, e nunca
+ * repete um CNPJ já usado em lugar nenhum. Se o CNPJ não veio na busca, ou
+ * qualquer verificação falhar, retorna "não emparelhado" — a URL ainda é
+ * mostrada normalmente, só sem o CNPJ.
  */
 async function tryPairCnpj(
   companyName: string,
-  url: string,
+  rawCnpj: string | null | undefined,
   excludedBrands: Set<string>,
   usedCnpjsGlobal: Set<string>
 ): Promise<PairedCnpjFields> {
-  try {
-    const cnpjProvider = getCnpjDiscoveryProvider();
-    const found = await cnpjProvider.discoverCnpjForCompany({ companyName, url });
-    if (!found) return NO_CNPJ_PAIRED;
-    if (usedCnpjsGlobal.has(found.cnpj)) return NO_CNPJ_PAIRED;
+  if (!rawCnpj || rawCnpj.length !== 14) return NO_CNPJ_PAIRED;
+  if (usedCnpjsGlobal.has(rawCnpj)) return NO_CNPJ_PAIRED;
 
-    const validation = await validateCnpj(found.cnpj);
+  try {
+    const validation = await validateCnpj(rawCnpj);
     if (!validation.isValid) return NO_CNPJ_PAIRED;
     if (validation.isActive !== true) return NO_CNPJ_PAIRED;
     if (validation.isMei === true) return NO_CNPJ_PAIRED;
@@ -89,9 +90,9 @@ async function tryPairCnpj(
       cnpjVerified: true,
     };
   } catch (err) {
-    // Uma falha ao tentar parear o CNPJ (rate limit, erro de rede, etc.)
+    // Uma falha ao tentar validar o CNPJ (rate limit, erro de rede, etc.)
     // nunca deve derrubar o resultado da URL — só fica sem CNPJ emparelhado.
-    logger.debug("Não foi possível parear CNPJ para a URL", { companyName, url, error: String(err) });
+    logger.debug("Não foi possível validar o CNPJ pareado para a URL", { companyName, error: String(err) });
     return NO_CNPJ_PAIRED;
   }
 }
@@ -177,9 +178,9 @@ export async function searchUrlsForNiche(niche: string, quantity: number): Promi
         continue;
       }
 
-      // 12b. Tentar parear um CNPJ real para essa empresa (best-effort — a
-      // URL é mostrada de qualquer forma, com ou sem CNPJ emparelhado).
-      const cnpjFields = await tryPairCnpj(candidate.companyName, validation.finalUrl, excludedBrands, usedCnpjsGlobal);
+      // 12b. Validar o CNPJ que a própria busca já trouxe para essa empresa
+      // (best-effort — a URL é mostrada de qualquer forma, com ou sem CNPJ).
+      const cnpjFields = await tryPairCnpj(candidate.companyName, candidate.cnpj, excludedBrands, usedCnpjsGlobal);
       if (cnpjFields.cnpj) usedCnpjsGlobal.add(cnpjFields.cnpj);
 
       // 13. Salvar novo domínio no banco (constraint UNIQUE garante atomicidade)
