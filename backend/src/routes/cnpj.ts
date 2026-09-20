@@ -2,7 +2,7 @@ import { Router } from "express";
 import { searchRequestSchema, validateBody } from "../middleware/validation.js";
 import { searchRateLimiter } from "../middleware/rateLimiter.js";
 import { searchCnpjsForNiche } from "../services/cnpjSearchOrchestrator.js";
-import { listAllCnpjs, countCnpjs } from "../db/cnpjsRepository.js";
+import { listAllCnpjs, listCnpjsByNiche, countCnpjs } from "../db/cnpjsRepository.js";
 
 export const cnpjRouter = Router();
 
@@ -16,9 +16,10 @@ cnpjRouter.post("/search", searchRateLimiter, validateBody(searchRequestSchema),
   }
 });
 
-cnpjRouter.get("/", async (_req, res, next) => {
+cnpjRouter.get("/", async (req, res, next) => {
   try {
-    const results = await listAllCnpjs();
+    const niche = typeof req.query.niche === "string" ? req.query.niche : null;
+    const results = niche ? await listCnpjsByNiche(niche) : await listAllCnpjs();
     res.json({ results, total: results.length });
   } catch (err) {
     next(err);
