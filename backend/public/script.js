@@ -199,6 +199,10 @@ async function searchUrls(niche, quantity) {
   });
 }
 
+async function fetchStoredUrlsForNiche(niche) {
+  return apiFetch(`/api/urls/?niche=${encodeURIComponent(niche)}`);
+}
+
 function renderUrlResults(outcome) {
   const { results, requestedQuantity, message } = outcome;
   const visible = state.settings.hideManualReview
@@ -274,6 +278,10 @@ async function searchCnpjs(niche, quantity) {
     method: "POST",
     body: JSON.stringify({ niche, quantity }),
   });
+}
+
+async function fetchStoredCnpjsForNiche(niche) {
+  return apiFetch(`/api/cnpj/?niche=${encodeURIComponent(niche)}`);
 }
 
 function renderCnpjResults(outcome) {
@@ -370,6 +378,7 @@ function renderRecentSearches(data) {
         <span class="recent-type-badge">${typeLabel}</span>
         <span class="recent-niche">${escapeHtml(search.query)}</span>
         <span class="recent-counts">${search.resultQuantity} de ${search.requestedQuantity} solicitado${search.requestedQuantity === 1 ? "" : "s"}</span>
+        <button class="btn btn-ghost btn-small" data-view-search-results data-search-type="${search.type}" data-search-niche="${escapeHtml(search.query)}">VER RESULTADOS</button>
       `;
       list.appendChild(li);
     }
@@ -383,6 +392,41 @@ async function refreshRecentSearches() {
   try {
     const data = await loadRecentSearches();
     renderRecentSearches(data);
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+/**
+ * Reexibe, na aba correspondente, os resultados JÁ SALVOS (permanentes) para
+ * o nicho de uma pesquisa recente — sem fazer uma nova busca nem gastar
+ * créditos da API. Mostra tudo que já foi encontrado para esse nicho até
+ * agora (não só o que veio daquele clique específico), já que o banco é
+ * organizado por nicho e nunca repete um domínio/CNPJ já visto.
+ */
+async function viewStoredResultsForSearch(type, niche) {
+  try {
+    if (type === "urls") {
+      const data = await fetchStoredUrlsForNiche(niche);
+      switchView("urls");
+      renderUrlResults({
+        results: data.results,
+        requestedQuantity: data.results.length,
+        message: `Mostrando ${data.results.length} URL${data.results.length === 1 ? "" : "s"} já salva${
+          data.results.length === 1 ? "" : "s"
+        } para o nicho "${niche}" (dado permanente, não é uma nova busca).`,
+      });
+    } else {
+      const data = await fetchStoredCnpjsForNiche(niche);
+      switchView("cnpj");
+      renderCnpjResults({
+        results: data.results,
+        requestedQuantity: data.results.length,
+        message: `Mostrando ${data.results.length} CNPJ${data.results.length === 1 ? "" : "s"} já salvo${
+          data.results.length === 1 ? "" : "s"
+        } para o nicho "${niche}" (dado permanente, não é uma nova busca).`,
+      });
+    }
   } catch (err) {
     showToast(err.message);
   }
@@ -509,6 +553,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("hamburger").addEventListener("click", openSidebarMobile);
   document.getElementById("sidebarClose").addEventListener("click", closeSidebarMobile);
   document.getElementById("sidebarOverlay").addEventListener("click", closeSidebarMobile);
+
+  document.getElementById("recentSearchesContainer").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-view-search-results]");
+    if (!btn) return;
+    viewStoredResultsForSearch(btn.dataset.searchType, btn.dataset.searchNiche);
+  });
 
   // Busca de URLs
   const urlForm = document.getElementById("urlForm");
