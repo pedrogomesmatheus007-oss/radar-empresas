@@ -6,6 +6,7 @@ import { validateCnpj } from "./cnpjValidationService.js";
 import { runComplianceScreening } from "./complianceService.js";
 import { isPublicEntityByLegalNature, looksLikePublicEntityByNameOrDomain } from "./publicEntityService.js";
 import { looksLikePersonName } from "./individualNameHeuristics.js";
+import { ensureAdCopyForNiche } from "./adCopyService.js";
 import {
   getUsedNormalizedDomains,
   getUsedCnpjsFromDomains,
@@ -18,7 +19,7 @@ import {
   matchesExcludedBrand,
 } from "../db/excludedBrandsRepository.js";
 import { recordSearch } from "../db/searchesRepository.js";
-import type { DomainRecord } from "../types/domain.js";
+import type { DomainRecord, AdCopyRecord } from "../types/domain.js";
 
 const logger = createLogger("urlSearchOrchestrator");
 
@@ -30,9 +31,15 @@ export interface UrlSearchOutcome {
   results: UrlSearchResultItem[];
   requestedQuantity: number;
   message: string;
+  /** Sugestão de título/descrição de anúncio para o nicho (best-effort — null se não puder ser gerada). */
+  adCopy: AdCopyRecord | null;
 }
 
-const MAX_DISCOVERY_ROUNDS = 3;
+// Cada rodada extra é uma chamada nova de IA com busca na web (o maior custo
+// por pesquisa). Reduzido de 3 para 1: se não achar tudo de uma vez, o
+// usuário decide se quer gastar de novo clicando em "Pesquisar" outra vez,
+// em vez de o sistema insistir sozinho até 3x automaticamente.
+const MAX_DISCOVERY_ROUNDS = 1;
 
 interface PairedCnpjFields {
   cnpj: string | null;
@@ -233,7 +240,11 @@ export async function searchUrlsForNiche(niche: string, quantity: number): Promi
           results.length === 1 ? "" : "s"
         } que atende${results.length === 1 ? "" : "m"} aos critérios. Não foram encontrados resultados adicionais.`;
 
-  return { results, requestedQuantity: quantity, message };
+  // Best-effort: já vem cacheado se esse nicho já foi pesquisado antes, então
+  // normalmente não gasta nenhuma chamada extra de API.
+  const adCopy = await ensureAdCopyForNiche(cleanNiche);
+
+  return { results, requestedQuantity: quantity, message, adCopy };
 }
 
 export async function getDomainsForNiche(niche: string): Promise<DomainRecord[]> {

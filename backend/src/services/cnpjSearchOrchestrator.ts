@@ -6,7 +6,8 @@ import { looksLikePersonName } from "./individualNameHeuristics.js";
 import { getUsedCnpjs, insertCnpjIfNew } from "../db/cnpjsRepository.js";
 import { getExcludedBrandNamesNormalized, matchesExcludedBrand } from "../db/excludedBrandsRepository.js";
 import { recordSearch } from "../db/searchesRepository.js";
-import type { CnpjRecord } from "../types/domain.js";
+import { ensureAdCopyForNiche } from "./adCopyService.js";
+import type { CnpjRecord, AdCopyRecord } from "../types/domain.js";
 
 const logger = createLogger("cnpjSearchOrchestrator");
 
@@ -15,9 +16,15 @@ export interface CnpjSearchOutcome {
   requestedQuantity: number;
   message: string;
   discardedReasons: string[];
+  /** Sugestão de título/descrição de anúncio para o nicho (best-effort — null se não puder ser gerada). */
+  adCopy: AdCopyRecord | null;
 }
 
-const MAX_DISCOVERY_ROUNDS = 3;
+// Cada rodada extra é uma chamada nova de IA com busca na web (o maior custo
+// por pesquisa). Reduzido de 3 para 1: se não achar tudo de uma vez, o
+// usuário decide se quer gastar de novo clicando em "Pesquisar" outra vez,
+// em vez de o sistema insistir sozinho até 3x automaticamente.
+const MAX_DISCOVERY_ROUNDS = 1;
 
 export async function searchCnpjsForNiche(niche: string, quantity: number): Promise<CnpjSearchOutcome> {
   const cleanNiche = niche.trim();
@@ -137,5 +144,9 @@ export async function searchCnpjsForNiche(niche: string, quantity: number): Prom
 
   logger.info("Busca de CNPJ concluída", { niche: cleanNiche, encontrados: results.length, quantity });
 
-  return { results, requestedQuantity: quantity, message, discardedReasons };
+  // Best-effort: já vem cacheado se esse nicho já foi pesquisado antes, então
+  // normalmente não gasta nenhuma chamada extra de API.
+  const adCopy = await ensureAdCopyForNiche(cleanNiche);
+
+  return { results, requestedQuantity: quantity, message, discardedReasons, adCopy };
 }

@@ -93,6 +93,45 @@
           </form>
         </div>
 
+        <div class="panel" id="urlManualPanel">
+          <div class="panel-inline">
+            <div>
+              <h3 class="panel-title">Adicionar manualmente (custo zero)</h3>
+              <p class="panel-subtitle">Você já achou a empresa (ex: pelo Google)? Cole a URL aqui — a ferramenta verifica de verdade (acesso HTTP real e, se informar o CNPJ, consulta em fonte oficial), sem gastar nenhuma chamada de IA.</p>
+            </div>
+            <button type="button" class="btn btn-ghost btn-small" id="urlManualToggle">ADICIONAR MANUALMENTE</button>
+          </div>
+          <form class="search-form" id="urlManualForm" hidden>
+            <div class="field">
+              <label for="urlManualCompanyName">Nome da empresa</label>
+              <input type="text" id="urlManualCompanyName" placeholder="Ex: Móveis Silva Ltda" required />
+            </div>
+            <div class="field">
+              <label for="urlManualUrl">URL do site</label>
+              <input type="text" id="urlManualUrl" placeholder="Ex: https://www.exemplo.com.br" required />
+            </div>
+            <div class="field">
+              <label for="urlManualCnpj">CNPJ (opcional)</label>
+              <input type="text" id="urlManualCnpj" placeholder="Só números ou com pontuação" />
+            </div>
+            <p class="settings-readonly-value">Nicho usado: o mesmo digitado no campo "Digite o nicho" acima.</p>
+            <button type="submit" class="btn btn-primary btn-small">Verificar e adicionar</button>
+          </form>
+        </div>
+
+        <div class="panel" id="urlAdCopyPanel" hidden>
+          <h3 class="panel-title">Anúncio sugerido (Google Ads) para este nicho</h3>
+          <p class="panel-subtitle">Sugestão de texto genérica para a categoria, gerada por IA — não é um dado verificado sobre uma empresa específica. Revise antes de usar num anúncio real.</p>
+          <div class="result-meta">
+            <div><span class="label">Título (<span id="urlAdCopyTitleLen">0</span>/30):</span><span class="mono" id="urlAdCopyTitle"></span></div>
+            <div><span class="label">Descrição (<span id="urlAdCopyDescLen">0</span>/90):</span><span class="mono" id="urlAdCopyDescription"></span></div>
+          </div>
+          <div class="result-actions">
+            <button class="btn btn-ghost btn-small" id="urlAdCopyCopyTitle">COPIAR TÍTULO</button>
+            <button class="btn btn-ghost btn-small" id="urlAdCopyCopyDescription">COPIAR DESCRIÇÃO</button>
+          </div>
+        </div>
+
         <div class="results-toolbar" id="urlResultsToolbar" hidden>
           <p id="urlResultMessage" class="result-message"></p>
           <div class="toolbar-actions">
@@ -125,6 +164,41 @@
               Pesquisar
             </button>
           </form>
+        </div>
+
+        <div class="panel" id="cnpjManualPanel">
+          <div class="panel-inline">
+            <div>
+              <h3 class="panel-title">Adicionar manualmente (custo zero)</h3>
+              <p class="panel-subtitle">Você já tem o nome e o CNPJ da empresa? Informe aqui — a ferramenta confirma na fonte oficial (BrasilAPI/ReceitaWS) e aplica as mesmas regras obrigatórias, sem gastar nenhuma chamada de IA.</p>
+            </div>
+            <button type="button" class="btn btn-ghost btn-small" id="cnpjManualToggle">ADICIONAR MANUALMENTE</button>
+          </div>
+          <form class="search-form" id="cnpjManualForm" hidden>
+            <div class="field">
+              <label for="cnpjManualCompanyName">Nome da empresa</label>
+              <input type="text" id="cnpjManualCompanyName" placeholder="Ex: Móveis Silva Ltda" required />
+            </div>
+            <div class="field">
+              <label for="cnpjManualCnpj">CNPJ</label>
+              <input type="text" id="cnpjManualCnpj" placeholder="Só números ou com pontuação" required />
+            </div>
+            <p class="settings-readonly-value">Nicho usado: o mesmo digitado no campo "Digite o nicho" acima.</p>
+            <button type="submit" class="btn btn-primary btn-small">Verificar e adicionar</button>
+          </form>
+        </div>
+
+        <div class="panel" id="cnpjAdCopyPanel" hidden>
+          <h3 class="panel-title">Anúncio sugerido (Google Ads) para este nicho</h3>
+          <p class="panel-subtitle">Sugestão de texto genérica para a categoria, gerada por IA — não é um dado verificado sobre uma empresa específica. Revise antes de usar num anúncio real.</p>
+          <div class="result-meta">
+            <div><span class="label">Título (<span id="cnpjAdCopyTitleLen">0</span>/30):</span><span class="mono" id="cnpjAdCopyTitle"></span></div>
+            <div><span class="label">Descrição (<span id="cnpjAdCopyDescLen">0</span>/90):</span><span class="mono" id="cnpjAdCopyDescription"></span></div>
+          </div>
+          <div class="result-actions">
+            <button class="btn btn-ghost btn-small" id="cnpjAdCopyCopyTitle">COPIAR TÍTULO</button>
+            <button class="btn btn-ghost btn-small" id="cnpjAdCopyCopyDescription">COPIAR DESCRIÇÃO</button>
+          </div>
         </div>
 
         <div class="results-toolbar" id="cnpjResultsToolbar" hidden>

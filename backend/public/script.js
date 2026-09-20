@@ -25,6 +25,8 @@ const API_BASE = ""; // mesma origem — o backend serve este próprio arquivo
 const state = {
   currentUrlResults: [],
   currentCnpjResults: [],
+  currentUrlAdCopy: null,
+  currentCnpjAdCopy: null,
   excludedBrands: [],
   retentionDays: null,
   settings: {
@@ -109,6 +111,39 @@ function complianceLabel(status) {
 }
 
 const NAO_VERIFICADO = "Não foi possível verificar este dado.";
+
+// ---------------------------------------------------------------------------
+// Anúncio (Google Ads) sugerido por nicho
+// ---------------------------------------------------------------------------
+
+async function fetchAdCopyForNiche(niche) {
+  const data = await apiFetch(`/api/ad-copy/?niche=${encodeURIComponent(niche)}`);
+  return data.result;
+}
+
+/**
+ * Mostra (ou esconde, se null) o painel de anúncio sugerido para o nicho,
+ * na aba "url" ou "cnpj". Guarda o texto atual em `state` para os botões de
+ * copiar lerem no momento do clique.
+ */
+function renderAdCopy(prefix, adCopy) {
+  const panel = document.getElementById(`${prefix}AdCopyPanel`);
+  if (!panel) return;
+
+  if (prefix === "url") state.currentUrlAdCopy = adCopy;
+  else state.currentCnpjAdCopy = adCopy;
+
+  if (!adCopy) {
+    panel.hidden = true;
+    return;
+  }
+
+  panel.hidden = false;
+  document.getElementById(`${prefix}AdCopyTitle`).textContent = adCopy.title;
+  document.getElementById(`${prefix}AdCopyTitleLen`).textContent = String(adCopy.title.length);
+  document.getElementById(`${prefix}AdCopyDescription`).textContent = adCopy.description;
+  document.getElementById(`${prefix}AdCopyDescLen`).textContent = String(adCopy.description.length);
+}
 
 // ---------------------------------------------------------------------------
 // Clipboard com fallback
@@ -330,6 +365,49 @@ function renderCnpjResults(outcome) {
 }
 
 // ---------------------------------------------------------------------------
+// Adicionar manualmente (custo ZERO — nenhuma chamada à Anthropic). O usuário
+// já achou a empresa sozinho; o backend só faz a VERIFICAÇÃO real (HTTP real
+// para URL, fonte oficial para CNPJ) e aplica as mesmas regras obrigatórias.
+// ---------------------------------------------------------------------------
+
+async function submitManualUrl(payload) {
+  const data = await apiFetch("/api/urls/manual", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return data.result;
+}
+
+async function submitManualCnpj(payload) {
+  const data = await apiFetch("/api/cnpj/manual", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return data.result;
+}
+
+/** Adiciona um item verificado manualmente à lista já exibida, sem nova busca. */
+function prependUrlResult(item) {
+  state.currentUrlResults = [item, ...state.currentUrlResults];
+  const n = state.currentUrlResults.length;
+  renderUrlResults({
+    results: state.currentUrlResults,
+    requestedQuantity: n,
+    message: `${n} URL${n === 1 ? "" : "s"} sendo exibida${n === 1 ? "" : "s"} nesta tela.`,
+  });
+}
+
+function prependCnpjResult(item) {
+  state.currentCnpjResults = [item, ...state.currentCnpjResults];
+  const n = state.currentCnpjResults.length;
+  renderCnpjResults({
+    results: state.currentCnpjResults,
+    requestedQuantity: n,
+    message: `${n} CNPJ${n === 1 ? "" : "s"} sendo exibido${n === 1 ? "" : "s"} nesta tela.`,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Pesquisas recentes
 // ---------------------------------------------------------------------------
 
@@ -416,6 +494,7 @@ async function viewStoredResultsForSearch(type, niche) {
           data.results.length === 1 ? "" : "s"
         } para o nicho "${niche}" (dado permanente, não é uma nova busca).`,
       });
+      renderAdCopy("url", await fetchAdCopyForNiche(niche));
     } else {
       const data = await fetchStoredCnpjsForNiche(niche);
       switchView("cnpj");
@@ -426,6 +505,7 @@ async function viewStoredResultsForSearch(type, niche) {
           data.results.length === 1 ? "" : "s"
         } para o nicho "${niche}" (dado permanente, não é uma nova busca).`,
       });
+      renderAdCopy("cnpj", await fetchAdCopyForNiche(niche));
     }
   } catch (err) {
     showToast(err.message);
@@ -574,11 +654,42 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const outcome = await searchUrls(niche, quantity);
       renderUrlResults(outcome);
+      renderAdCopy("url", outcome.adCopy ?? null);
       refreshRecentSearches();
     } catch (err) {
       showToast(err.message);
     } finally {
       setFormLoading(urlForm, false);
+    }
+  });
+
+  // Adicionar URL manualmente (custo zero)
+  const urlManualToggle = document.getElementById("urlManualToggle");
+  const urlManualForm = document.getElementById("urlManualForm");
+  urlManualToggle.addEventListener("click", () => {
+    urlManualForm.hidden = !urlManualForm.hidden;
+    urlManualToggle.textContent = urlManualForm.hidden ? "ADICIONAR MANUALMENTE" : "FECHAR";
+  });
+  urlManualForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const companyName = document.getElementById("urlManualCompanyName").value.trim();
+    const url = document.getElementById("urlManualUrl").value.trim();
+    const cnpj = document.getElementById("urlManualCnpj").value.trim();
+    const niche = document.getElementById("urlNiche").value.trim();
+    if (niche.length < 2) {
+      showToast('Digite o nicho no campo "Digite o nicho" (acima) antes de adicionar manualmente.');
+      return;
+    }
+    setFormLoading(urlManualForm, true, "Verificando…");
+    try {
+      const saved = await submitManualUrl({ companyName, url, niche, cnpj: cnpj || null });
+      prependUrlResult(saved);
+      urlManualForm.reset();
+      showToast("Empresa verificada e adicionada com sucesso!");
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      setFormLoading(urlManualForm, false);
     }
   });
 
@@ -596,11 +707,41 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const outcome = await searchCnpjs(niche, quantity);
       renderCnpjResults(outcome);
+      renderAdCopy("cnpj", outcome.adCopy ?? null);
       refreshRecentSearches();
     } catch (err) {
       showToast(err.message);
     } finally {
       setFormLoading(cnpjForm, false);
+    }
+  });
+
+  // Adicionar CNPJ manualmente (custo zero)
+  const cnpjManualToggle = document.getElementById("cnpjManualToggle");
+  const cnpjManualForm = document.getElementById("cnpjManualForm");
+  cnpjManualToggle.addEventListener("click", () => {
+    cnpjManualForm.hidden = !cnpjManualForm.hidden;
+    cnpjManualToggle.textContent = cnpjManualForm.hidden ? "ADICIONAR MANUALMENTE" : "FECHAR";
+  });
+  cnpjManualForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const companyName = document.getElementById("cnpjManualCompanyName").value.trim();
+    const cnpj = document.getElementById("cnpjManualCnpj").value.trim();
+    const niche = document.getElementById("cnpjNiche").value.trim();
+    if (niche.length < 2) {
+      showToast('Digite o nicho no campo "Digite o nicho" (acima) antes de adicionar manualmente.');
+      return;
+    }
+    setFormLoading(cnpjManualForm, true, "Verificando…");
+    try {
+      const saved = await submitManualCnpj({ companyName, cnpj, niche });
+      prependCnpjResult(saved);
+      cnpjManualForm.reset();
+      showToast("CNPJ verificado e adicionado com sucesso!");
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      setFormLoading(cnpjManualForm, false);
     }
   });
 
@@ -649,6 +790,24 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("exportCnpjCsv").addEventListener("click", () => {
     if (state.currentCnpjResults.length === 0) return;
     downloadViaBackend("/api/export/cnpj.csv");
+  });
+
+  // Anúncio (Google Ads) sugerido por nicho
+  document.getElementById("urlAdCopyCopyTitle").addEventListener("click", () => {
+    if (!state.currentUrlAdCopy) return;
+    copyAndToast(state.currentUrlAdCopy.title, "Título copiado!");
+  });
+  document.getElementById("urlAdCopyCopyDescription").addEventListener("click", () => {
+    if (!state.currentUrlAdCopy) return;
+    copyAndToast(state.currentUrlAdCopy.description, "Descrição copiada!");
+  });
+  document.getElementById("cnpjAdCopyCopyTitle").addEventListener("click", () => {
+    if (!state.currentCnpjAdCopy) return;
+    copyAndToast(state.currentCnpjAdCopy.title, "Título copiado!");
+  });
+  document.getElementById("cnpjAdCopyCopyDescription").addEventListener("click", () => {
+    if (!state.currentCnpjAdCopy) return;
+    copyAndToast(state.currentCnpjAdCopy.description, "Descrição copiada!");
   });
 
   // Marcas excluídas

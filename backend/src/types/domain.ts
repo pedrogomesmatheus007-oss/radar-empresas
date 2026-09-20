@@ -69,3 +69,17 @@ export interface CnpjCandidate {
   cnpj: string;
   sourceNote?: string;
 }
+
+/**
+ * Título/descrição de anúncio (Google Ads) sugeridos para um nicho. Ao
+ * contrário de DomainRecord/CnpjRecord, isto NÃO é um dado factual verificado
+ * sobre uma empresa real — é uma sugestão genérica de copywriting para a
+ * categoria, gerada por IA e guardada uma vez por nicho.
+ */
+export interface AdCopyRecord {
+  id: number;
+  niche: string;
+  title: string;
+  description: string;
+  createdAt: string;
+}

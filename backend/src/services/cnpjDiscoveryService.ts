@@ -147,7 +147,7 @@ export class AnthropicCnpjDiscoveryProvider implements CnpjDiscoveryProvider {
     const prompt = buildPrompt(params);
 
     const response = await anthropic.messages.create({
-      model: env.anthropicModel,
+      model: env.anthropicDiscoveryModel,
       max_tokens: 4000,
       tools: [
         {
@@ -199,7 +199,7 @@ export class AnthropicCnpjDiscoveryProvider implements CnpjDiscoveryProvider {
     const prompt = buildSingleCompanyPrompt(params);
 
     const response = await anthropic.messages.create({
-      model: env.anthropicModel,
+      model: env.anthropicDiscoveryModel,
       max_tokens: 1500,
       tools: [
         {

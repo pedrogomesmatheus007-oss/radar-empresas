@@ -16,6 +16,18 @@ export const env = {
 
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   anthropicModel: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-5",
+  /**
+   * Modelo usado especificamente nas chamadas que ligam a ferramenta de busca
+   * na web (descoberta de empresas/CNPJ) e na geração de anúncio — de longe
+   * a maior fonte de custo por pesquisa, porque cada resultado de busca na
+   * web vira contexto cobrado como tokens de entrada. Um modelo bem mais
+   * barato (Haiku) corta esse custo bastante sem abrir mão da verificação
+   * real: todo dado ainda é conferido depois em fontes oficiais (BrasilAPI/
+   * ReceitaWS/HTTP real), então a qualidade do modelo aqui não afeta a
+   * garantia de "nunca inventar" — essa garantia vem da verificação, não do
+   * modelo que sugere os candidatos.
+   */
+  anthropicDiscoveryModel: process.env.ANTHROPIC_DISCOVERY_MODEL ?? "claude-haiku-4-5-20251001",
   anthropicWebSearchMaxUses: requireEnvAsNumber("ANTHROPIC_WEB_SEARCH_MAX_USES", 6),
 
   brasilApiCnpjUrl: process.env.BRASILAPI_CNPJ_URL ?? "https://brasilapi.com.br/api/cnpj/v1",

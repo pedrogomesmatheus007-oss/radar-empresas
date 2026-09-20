@@ -115,7 +115,7 @@ export class AnthropicCompanyDiscoveryProvider implements CompanyDiscoveryProvid
     const prompt = buildPrompt(params);
 
     const response = await anthropic.messages.create({
-      model: env.anthropicModel,
+      model: env.anthropicDiscoveryModel,
       max_tokens: 4000,
       tools: [
         {

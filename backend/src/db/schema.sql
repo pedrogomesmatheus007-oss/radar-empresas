@@ -60,3 +60,16 @@ CREATE TABLE IF NOT EXISTS excluded_brands (
   created_at      TEXT NOT NULL,
   UNIQUE(normalized_name)
 );
+
+-- Título/descrição de anúncio (Google Ads) sugeridos por nicho. Diferente de
+-- domains/cnpjs, isso NÃO é um dado factual verificado — é um texto
+-- publicitário genérico gerado por IA para a categoria, guardado uma vez por
+-- nicho para nunca precisar gerar de novo (economiza chamadas de API).
+CREATE TABLE IF NOT EXISTS ad_copy (
+  id          SERIAL PRIMARY KEY,
+  niche       TEXT NOT NULL,
+  title       TEXT NOT NULL,        -- até 30 caracteres (limite do Google Ads)
+  description TEXT NOT NULL,        -- até 90 caracteres (limite do Google Ads)
+  created_at  TEXT NOT NULL,
+  UNIQUE(niche)
+);

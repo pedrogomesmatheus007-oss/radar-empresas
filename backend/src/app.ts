@@ -12,6 +12,7 @@ import { searchesRouter } from "./routes/searches.js";
 import { excludedBrandsRouter } from "./routes/excludedBrands.js";
 import { statsRouter } from "./routes/stats.js";
 import { exportRouter } from "./routes/export.js";
+import { adCopyRouter } from "./routes/adCopy.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // backend/public — o frontend (index.html/style.css/script.js) é servido
@@ -39,6 +40,7 @@ export function createApp() {
   app.use("/api/excluded-brands", excludedBrandsRouter);
   app.use("/api/stats", statsRouter);
   app.use("/api/export", exportRouter);
+  app.use("/api/ad-copy", adCopyRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
